@@ -1,55 +1,124 @@
-import * as one from "./one.ts";
-import * as two from "./two.ts";
 
-const input = { first: 1, second: 2 };
+const input = {
+    a: 1,
+    b: 2,
+};
 
-const flow_1 = (input): number[] => {
-    console.group("flow_1");
-    const a = one.add(one.extract(input, "first"), one.extract(input, "second"));
-    const b = one.multiply(a, a);
-    const c = one.multiply(b, one.side_effect(b));
-    const d = one.decompose(c);
-    const e = one.loop(d, one.add);
-    const final = e;
+type Input = typeof input;
 
-    console.log({
-        input,
-        a,
-        b,
-        c,
-        d,
-        e,
-        final,
-    }, { depth: null });
-    console.groupEnd();
+type Step = {
+    name: string;
+    run: (...args: any[]) => Promise<any>;
+    input: string[] | null;
+};
 
-    return final;
+const start: Step = {
+    name: 'start',
+    run: async (input: Input): Promise<Input> => {
+        console.dir({ name: 'start', input }, { depth: null });
+
+        return input;
+    },
+    input: null,
+};
+
+const end: Step = {
+    name: 'end',
+    run: async (input: Input): Promise<Input> => {
+        console.dir({ name: 'end', input }, { depth: null });
+
+        return input;
+    },
+    input: ['add'],
+};
+
+const add: Step = {
+    name: 'add',
+    run: async (a: number, b: number): Promise<number> => {
+        console.dir({ name: 'add', a, b }, { depth: null });
+
+        return a + b;
+    },
+    input: ['start.a', 'start.b'],
+};
+
+type Flow = {
+    name: string;
+    steps: Step[];
 }
-const out_1 = flow_1(input);
 
-const flow_2 = (input): number[] => {
-    console.group("flow_2");
-
-    const before_a_0 = two.from(input);
-    const before_a_1 = two.compose(before_a_0, two.extract("first"));
-    const before_a_2 = two.compose(before_a_0, two.extract("second"));
-
-    const a = two.add(before_a_1(), before_a_2());
-
-    const final = a();
-
-    console.log({
-        input,
-        ba0: before_a_0(),
-        ba1: before_a_1(),
-        ba2: before_a_2(),
-        a: a(),
-        final,
-    }, { depth: null });
-    console.groupEnd();
-
-    return input;
+const ucc: Flow = {
+    name: 'ucc',
+    steps: [
+        start,
+        add,
+        end,
+    ],
 }
-const out_2 = flow_2(input);
 
-console.dir({ out_1, out_2 }, { depth: null });
+const run = async (flow: Flow, input: Input): Promise<boolean> => {
+    console.log(`Starting flow ${flow.name}`);
+
+    let queue = [...flow.steps];
+    let results = new Map<string, unknown>();
+    let iteration = 0;
+
+    while (queue.length > 0) {
+        iteration++;
+        const step = queue.shift();
+
+        if (!step) {
+            console.log('Queue empty, flow complete');
+            break;
+        }
+
+        console.log(`Processing step ${step.name}`);
+        if (step.input === null) {
+            const result = await step.run(input);
+            switch (typeof result) {
+                case 'object':
+                    Object.entries(result).forEach(([key, value]) => {
+                        results.set(`${step.name}.${key}`, value);
+                    });
+                default:
+                    results.set(step.name, result);
+                    break;
+            }
+            continue;
+        }
+
+        if (step.input) {
+            const inputs: unknown[] = [];
+
+            for (const key of step.input) {
+                const value = results.get(key);
+
+                if (!value) {
+                    console.error(`Missing input for ${key}, adding step to queue`);
+                    queue.push(step);
+                    continue;
+                }
+
+                inputs.push(value);
+            }
+
+            const result = await step.run(...inputs);
+            switch (typeof result) {
+                case 'object':
+                    Object.entries(result).forEach(([key, value]) => {
+                        results.set(`${step.name}.${key}`, value);
+                    });
+                default:
+                    results.set(step.name, result);
+                    break;
+            }
+            continue;
+        }
+    };
+
+    console.log(`Flow complete ${flow.name} in ${iteration} iterations`);
+
+    return true;
+}
+
+run(ucc, input);
