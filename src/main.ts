@@ -11,7 +11,7 @@ type Input = typeof input;
 type Step = {
     name: string;
     run: (...args: any[]) => Promise<any>;
-    input: string[] | null;
+    input: string[];
 };
 
 type Flow = {
@@ -19,7 +19,7 @@ type Flow = {
     steps: Step[];
 }
 
-const run = async (flow: Flow, input: Input): Promise<boolean> => {
+const run = async (flow: Flow, input: Input): Promise<any> => {
     console.log(`Starting flow ${flow.name}`);
 
     let queue = [...flow.steps];
@@ -36,7 +36,7 @@ const run = async (flow: Flow, input: Input): Promise<boolean> => {
         }
 
         console.log(`Processing step ${step.name}`);
-        if (step.input === null) {
+        if (step.input.length === 0) {
             const result = await step.run(input);
             if (typeof result === 'object') {
                 Object.entries(result).forEach(([key, value]) => {
@@ -44,6 +44,7 @@ const run = async (flow: Flow, input: Input): Promise<boolean> => {
                 });
             }
             results.set(step.name, result);
+            results.set('final', result);
             continue;
         }
 
@@ -69,54 +70,60 @@ const run = async (flow: Flow, input: Input): Promise<boolean> => {
                 });
             }
             results.set(step.name, result);
+            results.set('final', result);
             continue;
         }
     };
 
     console.log(`Flow complete ${flow.name} in ${iteration} iterations`);
 
-    return true;
+    return results.get('final');
 }
 
-// Steps
+// Executors
 
-const start: Step = {
-    name: 'start',
-    run: async (input: Input): Promise<Input> => {
-        console.dir({ name: 'start', input }, { depth: null });
+const add = async (a: number, b: number): Promise<number> => {
+    console.dir({ message: `Adding ${a} and ${b}`, a, b }, { depth: null });
 
-        return input;
-    },
-    input: null,
-};
+    return a + b;
+}
 
-const end: Step = {
-    name: 'end',
-    run: async (input: Input): Promise<Input> => {
-        console.dir({ name: 'end', input }, { depth: null });
+const modulo = async (a: number, b: number): Promise<number> => {
+    console.dir({ message: `Modulo ${a} and ${b}`, a, b }, { depth: null });
 
-        return input;
-    },
-    input: ['add'],
-};
+    return a % b;
+}
 
-const add: Step = {
-    name: 'add',
-    run: async (a: number, b: number): Promise<number> => {
-        console.dir({ name: 'add', a, b }, { depth: null });
+const printer = (message: string) => (input: any) => {
+    console.dir({ message, input }, { depth: null });
 
-        return a + b;
-    },
-    input: ['start.a', 'start.b'],
-};
+    return input;
+}
 
 const ucc: Flow = {
     name: 'ucc',
     steps: [
-        end,
-        add,
-        start,
+        {
+            name: 'start',
+            run: printer('Start'),
+            input: [],
+        } satisfies Step,
+        {
+            name: 'add',
+            run: add,
+            input: ['start.a', 'start.b'],
+        } satisfies Step,
+        {
+            name: 'end',
+            run: printer('End'),
+            input: ['add'],
+        } satisfies Step,
     ],
 };
 
-run(ucc, input);
+const final = await run(ucc, input);
+
+console.log({ final });
+
+export { };
+
