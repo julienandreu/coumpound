@@ -194,11 +194,12 @@ const mainFlow: Flow = {
 };
 
 const input = [
-    { a: 1 },
+    { a: 123 },
     { a: 2 },
 ];
 
 const final = await run(mainFlow, input, { maxIterations: mainFlow.steps.length });
+// const final = await run(loopFlow, { index: 456, item: input[0] }, { maxIterations: mainFlow.steps.length * 4 });
 
 console.log({ final });
 
