@@ -1,12 +1,7 @@
 
-const input = {
-    a: 1,
-    b: 2,
-};
-
 // SDK
 
-type Input = typeof input;
+type Input = any;
 
 type Step = {
     name: string;
@@ -19,14 +14,19 @@ type Flow = {
     steps: Step[];
 }
 
-const run = async (flow: Flow, input: Input): Promise<any> => {
-    console.log(`Starting flow ${flow.name}`);
+const run = async (flow: Flow, input: Input, options: { maxIterations?: number } = {}): Promise<any> => {
+    console.dir({ message: `Starting flow ${flow.name}`, input, options }, { depth: null });
 
     let queue = [...flow.steps];
     let results = new Map<string, unknown>();
     let iteration = 0;
 
     while (queue.length > 0) {
+        if (options.maxIterations && iteration >= options.maxIterations) {
+            console.log(`Max iterations reached, flow stopped`);
+            break;
+        }
+
         iteration++;
         const step = queue.shift();
 
@@ -35,9 +35,10 @@ const run = async (flow: Flow, input: Input): Promise<any> => {
             break;
         }
 
-        console.log(`Processing step ${step.name}`);
+        console.dir({ message: `Processing step ${step.name}` }, { depth: null });
         if (step.input.length === 0) {
             const result = await step.run(input);
+            console.dir({ message: `0. Result type: ${typeof result}`, result, type: typeof result }, { depth: null });
             if (typeof result === 'object') {
                 Object.entries(result).forEach(([key, value]) => {
                     results.set(`${step.name}.${key}`, value);
@@ -54,8 +55,8 @@ const run = async (flow: Flow, input: Input): Promise<any> => {
             for (const key of step.input) {
                 const value = results.get(key);
 
-                if (!value) {
-                    console.error(`Missing input for ${key}, adding step to queue`);
+                if (value === undefined) {
+                    console.error(`Missing input for ${key}, postponing step`);
                     queue.push(step);
                     break;
                 }
@@ -64,6 +65,7 @@ const run = async (flow: Flow, input: Input): Promise<any> => {
             }
 
             const result = await step.run(...inputs);
+            console.dir({ message: `#. Result type: ${typeof result}`, result, type: typeof result }, { depth: null });
             if (typeof result === 'object') {
                 Object.entries(result).forEach(([key, value]) => {
                     results.set(`${step.name}.${key}`, value);
@@ -88,20 +90,32 @@ const add = async (a: number, b: number): Promise<number> => {
     return a + b;
 }
 
+const field = async <T extends Record<PropertyKey, unknown>>(source: T, key: keyof T): Promise<T[typeof key]> => {
+    console.dir({ message: `Extracting field ${key.toString()} from ${JSON.stringify(source)}`, source, key }, { depth: null });
+
+    return source[key];
+}
+
 const modulo = async (a: number, b: number): Promise<number> => {
     console.dir({ message: `Modulo ${a} and ${b}`, a, b }, { depth: null });
 
     return a % b;
 }
 
-const printer = (message: string) => (input: any) => {
+const printer = (message: string) => async (input: any) => {
     console.dir({ message, input }, { depth: null });
 
     return input;
 }
 
-const ucc: Flow = {
-    name: 'ucc',
+const literal = (value: any) => async () => {
+    console.dir({ message: `Literal`, value }, { depth: null });
+
+    return value;
+}
+
+const main: Flow = {
+    name: 'main',
     steps: [
         {
             name: 'start',
@@ -109,9 +123,29 @@ const ucc: Flow = {
             input: [],
         } satisfies Step,
         {
+            name: 'value',
+            run: literal(2),
+            input: [],
+        } satisfies Step,
+        {
+            name: 'modulo',
+            run: modulo,
+            input: ['start.index', 'value'],
+        } satisfies Step,
+        {
+            name: 'a',
+            run: literal('a'),
+            input: [],
+        } satisfies Step,
+        {
+            name: 'field',
+            run: field,
+            input: ['start.item', 'a'],
+        } satisfies Step,
+        {
             name: 'add',
             run: add,
-            input: ['start.a', 'start.b'],
+            input: ['field', 'modulo'],
         } satisfies Step,
         {
             name: 'end',
@@ -121,7 +155,12 @@ const ucc: Flow = {
     ],
 };
 
-const final = await run(ucc, input);
+const input = [
+    { a: 1 },
+    { a: 2 },
+];
+
+const final = await run(main, { index: 0, item: input[0] }, { maxIterations: main.steps.length });
 
 console.log({ final });
 
