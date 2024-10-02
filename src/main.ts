@@ -38,7 +38,6 @@ const run = async (flow: Flow, input: Input, options: { maxIterations?: number }
         console.dir({ message: `Processing step ${step.name}` }, { depth: null });
         if (step.input.length === 0) {
             const result = await step.run(input);
-            console.dir({ message: `0. Result type: ${typeof result}`, result, type: typeof result }, { depth: null });
             if (typeof result === 'object') {
                 Object.entries(result).forEach(([key, value]) => {
                     results.set(`${step.name}.${key}`, value);
@@ -65,7 +64,6 @@ const run = async (flow: Flow, input: Input, options: { maxIterations?: number }
             }
 
             const result = await step.run(...inputs);
-            console.dir({ message: `#. Result type: ${typeof result}`, result, type: typeof result }, { depth: null });
             if (typeof result === 'object') {
                 Object.entries(result).forEach(([key, value]) => {
                     results.set(`${step.name}.${key}`, value);
@@ -91,7 +89,7 @@ const add = async (a: number, b: number): Promise<number> => {
 }
 
 const field = async <T extends Record<PropertyKey, unknown>>(source: T, key: keyof T): Promise<T[typeof key]> => {
-    console.dir({ message: `Extracting field ${key.toString()} from ${JSON.stringify(source)}`, source, key }, { depth: null });
+    console.dir({ message: `Extracting field ${String(key)} from ${JSON.stringify(source)}`, source, key }, { depth: null });
 
     return source[key];
 }
@@ -114,8 +112,22 @@ const literal = (value: any) => async () => {
     return value;
 }
 
-const main: Flow = {
-    name: 'main',
+const loop = async (flow: Flow, input: unknown[], options: { maxIterations?: number } = {}): Promise<unknown[]> => {
+    const results: unknown[] = [];
+
+    for (let index = 0; index < input.length; index++) {
+        const item = input[index];
+        console.group(`Processing item ${index}`);
+        const result = await run(flow, { index, item }, options);
+        console.groupEnd();
+
+        results.push(result);
+    }
+    return results;
+}
+
+const loopFlow: Flow = {
+    name: 'loop',
     steps: [
         {
             name: 'start',
@@ -155,12 +167,38 @@ const main: Flow = {
     ],
 };
 
+const mainFlow: Flow = {
+    name: 'main',
+    steps: [
+        {
+            name: 'start',
+            run: printer('Start'),
+            input: [],
+        } satisfies Step,
+        {
+            name: 'prepare_loop',
+            run: literal(loopFlow),
+            input: [],
+        } satisfies Step,
+        {
+            name: 'loop',
+            run: loop,
+            input: ['prepare_loop', 'start'],
+        } satisfies Step,
+        {
+            name: 'end',
+            run: printer('End'),
+            input: ['loop'],
+        } satisfies Step,
+    ],
+};
+
 const input = [
     { a: 1 },
     { a: 2 },
 ];
 
-const final = await run(main, { index: 0, item: input[0] }, { maxIterations: main.steps.length });
+const final = await run(mainFlow, input, { maxIterations: mainFlow.steps.length });
 
 console.log({ final });
 
