@@ -6,7 +6,8 @@ export class LogStep extends BaseStep {
     };
 
     override async run() {
-        await Promise.resolve();
-        console.log("LOG", this.inputs.data);
+        await super.run();
+
+        console.dir(this.inputs.data, { depth: null });
     }
 }

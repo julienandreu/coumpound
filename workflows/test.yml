@@ -1,7 +1,32 @@
 name: Test
 steps:
-  - name: Log
-    uses: Log
-    id: log
+  - name: Search on Google
+    uses: Fetch
+    id: searchOnGoogle
     inputs:
-      data: Hello, world!
+      url: https://www.google.com/search?q=test
+      method: GET
+
+  - name: Extract date from headers
+    uses: Field
+    id: getDateFromHeaders
+    inputs:
+      path: $.date
+      source: ${{ searchOnGoogle.outputs.headers }}
+    
+  - name: Know if the year is a leap year
+    uses: OpenAI
+    id: isLeapYear
+    inputs:
+      model: gpt-4o-mini-2024-07-18
+      systemPrompt: |
+        You are a helpful assistant that knows if a year is a leap year.
+      userPrompt: |
+        Is the year from the date ${{ getDateFromHeaders.outputs.values }} a leap year?
+        Just answer with "true" or "false".
+      max_output_tokens: 16
+
+  - name: Log if the year is a leap year
+    uses: Log
+    inputs:
+      data: ${{ isLeapYear.outputs.response }}

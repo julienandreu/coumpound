@@ -1,5 +1,3 @@
-import { NotImplementedError } from "../errors/not-implemented.error";
-
 export class BaseStep {
     inputs: Record<string, unknown> = {} as const;
     outputs: Record<string, unknown> = {} as const;
@@ -17,6 +15,5 @@ export class BaseStep {
 
     async run(): Promise<void> {
         await Promise.resolve();
-        throw new NotImplementedError(`${this.constructor.name}.run() must be implemented`);
     }
 }
