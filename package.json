@@ -13,7 +13,7 @@
         "@types/jest": "^29.5.14",
         "eslint": "^9.22.0",
         "ts-jest": "^29.2.6",
-        "ts-node": "^10.9.2",
+        "tsx": "^4.19.3",
         "typescript": "^5.8.2",
         "typescript-eslint": "^8.26.1"
     },
@@ -34,12 +34,17 @@
     "scripts": {
         "build": "tsc",
         "clean": "rm -rf dist",
-        "dev": "ts-node src/index.ts",
+        "dev": "tsx src/index.ts",
         "lint": "eslint src",
         "start": "node dist/index.js",
         "test": "jest"
     },
     "type": "commonjs",
     "types": "dist/types/index.d.ts",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "dependencies": {
+        "jsonpath-plus": "^10.3.0",
+        "nanoid": "^5.1.5",
+        "yaml": "^2.7.0"
+    }
 }

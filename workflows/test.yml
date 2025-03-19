@@ -1,0 +1,7 @@
+name: Test
+steps:
+  - name: Log
+    uses: Log
+    id: log
+    inputs:
+      data: Hello, world!
