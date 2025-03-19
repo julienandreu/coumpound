@@ -1,0 +1,45 @@
+{
+    "author": {
+        "email": "julienandreu@me.com",
+        "name": "Julien Andreu",
+        "url": "https://github.com/julienandreu"
+    },
+    "bugs": {
+        "url": "https://github.com/julienandreu/bullseye/issues"
+    },
+    "description": "🎯 Bullseye",
+    "devDependencies": {
+        "@eslint/js": "^9.22.0",
+        "@types/jest": "^29.5.14",
+        "eslint": "^9.22.0",
+        "ts-jest": "^29.2.6",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.2",
+        "typescript-eslint": "^8.26.1"
+    },
+    "engines": {
+        "node": ">=22"
+    },
+    "files": [
+        "dist"
+    ],
+    "homepage": "https://github.com/julienandreu/bullseye#readme",
+    "license": "MIT",
+    "main": "dist/index.js",
+    "name": "bullseye",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/julienandreu/bullseye.git"
+    },
+    "scripts": {
+        "build": "tsc",
+        "clean": "rm -rf dist",
+        "dev": "ts-node src/index.ts",
+        "lint": "eslint src",
+        "start": "node dist/index.js",
+        "test": "jest"
+    },
+    "type": "commonjs",
+    "types": "dist/types/index.d.ts",
+    "version": "0.1.0"
+}
